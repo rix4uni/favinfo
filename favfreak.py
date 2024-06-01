@@ -14,6 +14,9 @@ import subprocess
 import requests
 import hashlib
 import base64
+import urllib3
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # Define the version
 __version__ = "v0.0.1"  # Current Version of Favfreak
@@ -86,7 +89,7 @@ def main():
             favicon_urls.append(favicon_url)  # Collect favicon URLs
 
             # Calculate and print the hash of the favicon content
-            hash_value = hashlib.md5(requests.get(favicon_url, timeout=5).content).hexdigest()
+            hash_value = hashlib.md5(requests.get(favicon_url, verify=False, timeout=5).content).hexdigest()
             unique_hashes.add(hash_value)  # Add hash to the set of unique hashes
         else:
             print("\u001b[31m[ERR]\u001b[0m Not Fetched '%s'" % original_url)
