@@ -21,6 +21,9 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # Define the version
 __version__ = "v0.0.1"  # Current Version of Favfreak
 
+# Declare global variable
+a = {}
+
 def extract_favicon_url(html_content):
     try:
         result = subprocess.run(
@@ -33,6 +36,7 @@ def extract_favicon_url(html_content):
         return None
 
 def fetch_url(url_pair):
+    global a  # Declare a as a global variable to modify it
     original_url, url = url_pair
     try:
         ctx = ssl.create_default_context()
@@ -139,16 +143,15 @@ if __name__ == "__main__":
         if os.name == 'nt':
             os.system('cls')
 
-        banner = """\u001b[32m
-         ____  __  _  _  ____  ____  ____    __    _  _ 
-        ( ___)/__\( \/ )( ___)(  _ \( ___)  /__\  ( )/ )
-         )__)/(__)\\  /  )__)  )   / )__)  /(__)\  )  ( 
-        (__)(__)(__)\/  (__)  (_)\_)(____)(__)(__)(_)\_)
-        \u001b[32m
-                               \u001b[35m- Coded with \u001b[31m<3\u001b[0m\u001b[35m Bhagirath Saxena\u001b[0m
+        banner = r"""
+        ______               ______                    __  
+       / ____/____ _ _   __ / ____/_____ ___   ____ _ / /__
+      / /_   / __  /| | / // /_   / ___// _ \ / __ // //_/
+     / __/  / /_/ / | |/ // __/  / /   /  __// /_/ // ,<   
+    /_/     \__,_/  |___//_/    /_/    \___/ \__,_//_/|_|
         """
         print(banner)
-        a = {}
+        a = {}  # Initialize a at the top level
         a, urls = main()
 
         # Add your fingerprints here

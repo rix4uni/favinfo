@@ -3,9 +3,16 @@ FavFreak Use different types of regex to collect favicon.ico
 
 The original FavFreak https://github.com/devanshbatham/FavFreak, I change some code according to my requirements.
 
+# Installation
+```
+git clone https://github.com/rix4uni/FavFreak.git
+cd FavFreak
+python3 setup.py install
+```
+
 # Usage
 ```
-usage: favfreak.py [-h] [-v]
+usage: favfreak [-h] [-v]
 
 FavFreak - a Favicon Hash based asset mapper
 
@@ -14,18 +21,11 @@ options:
   -v, --version  show program's version number and exit
 ```
 
-# Installation
-```
-git clone https://github.com/rix4uni/FavFreak.git
-cd FavFreak
-pip3 install -r requirements.txt
-```
-
 # Examples
 
 Single URL
 ```
-echo "https://console.cloud.google.com" | python3 favfreak.py
+echo "https://console.cloud.google.com" | favfreak
 ```
 
 Output
@@ -34,7 +34,7 @@ Output
 
 Multiple URLs
 ```
-cat subs.txt | python3 favfreak.py
+cat subs.txt | favfreak
 ```
 
 Output
