@@ -159,6 +159,20 @@ func calculateSHA256(faviconBytes []byte) string {
 	return fmt.Sprintf("%x", hash.Sum(nil))
 }
 
+func ensureProtocol(input string, client *http.Client) string {
+    if !strings.HasPrefix(input, "http://") && !strings.HasPrefix(input, "https://") {
+        // Try HTTPS first
+        testURL := "https://" + input
+        resp, err := client.Head(testURL) // Use HEAD to check availability quickly
+        if err == nil && resp.StatusCode == http.StatusOK {
+            return testURL
+        }
+        // Fallback to HTTP
+        return "http://" + input
+    }
+    return input
+}
+
 func main() {
 	// Define the flags
 	timeout := flag.Duration("timeout", 10*time.Second, "Set the HTTP request timeout duration")
@@ -166,6 +180,7 @@ func main() {
 	silent := flag.Bool("silent", false, "Silent mode.")
 	source := flag.Bool("source", false, "Enable source output for where the url coming from scraped or added /favicon.ico")
 	userAgent := flag.String("H", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36", "Set the User-Agent header for HTTP requests")
+	fingerprintPath := flag.String("fingerprint", "", "Path to the fingerprint.json file (default: $HOME/.config/favinfo/fingerprint.json or ./fingerprint.json)")
 	flag.Parse()
 
 	if *version {
@@ -187,14 +202,41 @@ func main() {
 	client.Transport = &http.Transport{
 		Proxy: http.ProxyFromEnvironment,
 		// Modify the default transport to include the User-Agent header
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		DisableKeepAlives: false,
 	}
 
-	// Load the fingerprint map from fingerprint.json
-	fingerprintMap, err := loadFingerprintMap("fingerprint.json")
+	// Determine the path to fingerprint.json
+	var fingerprintFilePath string
+	if *fingerprintPath != "" {
+	    // Use the custom path provided via the flag
+	    fingerprintFilePath = *fingerprintPath
+	} else {
+	    // Get the user's home directory
+	    homeDir, err := os.UserHomeDir()
+	    if err != nil {
+	        fmt.Println("Error getting home directory:", err)
+	        return
+	    }
+
+	    // Check for fingerprint.json in $HOME/.config/favinfo/
+	    configPath := homeDir + "/.config/favinfo/fingerprint.json"
+	    if _, err := os.Stat(configPath); err == nil {
+	        fingerprintFilePath = configPath
+	    } else if _, err := os.Stat("fingerprint.json"); err == nil {
+	        // Fall back to fingerprint.json in the current directory
+	        fingerprintFilePath = "fingerprint.json"
+	    } else {
+	        fmt.Println("Error: fingerprint.json not found in $HOME/.config/favinfo/ or current directory.")
+	        return
+	    }
+	}
+
+	// Load the fingerprint map
+	fingerprintMap, err := loadFingerprintMap(fingerprintFilePath)
 	if err != nil {
-		fmt.Println("Error loading fingerprint.json:", err)
-		return
+	    fmt.Printf("Error loading fingerprint.json from %s: %v\n", fingerprintFilePath, err)
+	    return
 	}
 
 	// Read URL(s) from stdin
@@ -214,6 +256,7 @@ func main() {
 		req.Header.Set("User-Agent", *userAgent)
 
 		// Fetch the favicons
+		input = ensureProtocol(input, client)
 		favicons, err := getFaviconUrls(input, client, *source)
 		if err != nil {
 			fmt.Printf("Error fetching favicons: %v\n", err)

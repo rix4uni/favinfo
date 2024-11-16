@@ -9,9 +9,9 @@ go install github.com/rix4uni/favinfo@latest
 
 ## Download prebuilt binaries
 ```
-wget https://github.com/rix4uni/favinfo/releases/download/v0.0.4/favinfo-linux-amd64-0.0.4.tgz
-tar -xvzf favinfo-linux-amd64-0.0.4.tgz
-rm -rf favinfo-linux-amd64-0.0.4.tgz
+wget https://github.com/rix4uni/favinfo/releases/download/v0.0.5/favinfo-linux-amd64-0.0.5.tgz
+tar -xvzf favinfo-linux-amd64-0.0.5.tgz
+rm -rf favinfo-linux-amd64-0.0.5.tgz
 mv favinfo ~/go/bin/favinfo
 ```
 Or download [binary release](https://github.com/rix4uni/favinfo/releases) for your platform.
@@ -27,6 +27,8 @@ cd favinfo; go install
 Usage of favinfo:
   -H string
         Set the User-Agent header for HTTP requests (default "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36")
+  -fingerprint string
+        Path to the fingerprint.json file (default: $HOME/.config/favinfo/fingerprint.json or ./fingerprint.json)
   -silent
         Silent mode.
   -source
