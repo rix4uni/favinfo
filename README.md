@@ -1,43 +1,50 @@
-# FavFreak
-FavFreak Use different types of regex to collect favicon.ico
+## favinfo
 
-The original FavFreak https://github.com/devanshbatham/FavFreak, I change some code according to my requirements.
+favinfo scrapes favicon in HTML code and many other different ways.
 
-# Installation
+## Installation
 ```
-git clone https://github.com/rix4uni/FavFreak.git
-cd FavFreak
-python3 setup.py install
+go install github.com/rix4uni/favinfo@latest
 ```
 
-# Usage
+## Download prebuilt binaries
 ```
-usage: favfreak [-h] [-v]
-
-FavFreak - a Favicon Hash based asset mapper
-
-options:
-  -h, --help     show this help message and exit
-  -v, --version  show program's version number and exit
+wget https://github.com/rix4uni/favinfo/releases/download/v0.0.4/favinfo-linux-amd64-0.0.4.tgz
+tar -xvzf favinfo-linux-amd64-0.0.4.tgz
+rm -rf favinfo-linux-amd64-0.0.4.tgz
+mv favinfo ~/go/bin/favinfo
 ```
+Or download [binary release](https://github.com/rix4uni/favinfo/releases) for your platform.
 
-# Examples
-
-Single URL
+## Compile from source
 ```
-echo "https://console.cloud.google.com" | favfreak
+git clone --depth 1 github.com/rix4uni/favinfo.git
+cd favinfo; go install
 ```
 
-Output
-![image](https://github.com/rix4uni/FavFreak/assets/72344025/57ec74ca-aca4-4a54-86d9-15ae836480d0)
-
-
-Multiple URLs
+## Usage
 ```
-cat subs.txt | favfreak
+Usage of favinfo:
+  -H string
+        Set the User-Agent header for HTTP requests (default "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36")
+  -silent
+        Silent mode.
+  -source
+        Enable source output for where the url coming from scraped or added /favicon.ico
+  -timeout duration
+        Set the HTTP request timeout duration (default 10s)
+  -version
+        Print the version of the tool and exit.
 ```
 
-Output
-![image](https://github.com/rix4uni/FavFreak/assets/72344025/3e7f8833-a4c8-46c3-8570-724b99507217)
-![image](https://github.com/rix4uni/FavFreak/assets/72344025/63cd7600-7e59-4140-b924-c96f82a6afe1)
+## Output Examples
 
+Single URL:
+```
+echo "https://www.google.com" | favinfo
+```
+
+Multiple URLs:
+```
+cat subs.txt | favinfo
+```
