@@ -6,7 +6,6 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -16,9 +15,35 @@ import (
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
+	"github.com/spf13/pflag"
 	"github.com/twmb/murmur3"
 	"github.com/rix4uni/favinfo/banner"
 )
+
+// FaviconResult represents the result structure for JSON output
+type FaviconResult struct {
+	InputURL    string `json:"input_url"`
+	FaviconURL  string `json:"favicon_url"`
+	MurmurHash  int32  `json:"murmur_hash"`
+	MD5Hash     string `json:"md5_hash"`
+	SHA256Hash  string `json:"sha256_hash"`
+	Technology  string `json:"technology"`
+}
+
+// SearchEngineQueries represents search engine query formats
+type SearchEngineQueries struct {
+	Shodan   string `json:"shodan"`
+	Fofa     string `json:"fofa"`
+	Censys   string `json:"censys"`
+	ZoomEye  string `json:"zoomeye"`
+	Quake    string `json:"quake"`
+}
+
+// ExtendedFaviconResult includes search engine queries
+type ExtendedFaviconResult struct {
+	FaviconResult
+	SearchQueries SearchEngineQueries `json:"search_queries"`
+}
 
 // getFaviconUrls extracts all favicons from the given URL.
 func getFaviconUrls(baseURL string, client *http.Client, source bool) ([]string, error) {
@@ -173,15 +198,106 @@ func ensureProtocol(input string, client *http.Client) string {
     return input
 }
 
+// printSearchExamples prints examples of how to use the hashes in various search engines
+func printSearchExamples(faviconURL string, murmurHash int32, md5Hash, sha256Hash, tech string) {
+	// ANSI color codes
+	const (
+		Reset      = "\033[0m"
+		Bold       = "\033[1m"
+		Red        = "\033[31m"
+		Green      = "\033[32m"
+		Yellow     = "\033[33m"
+		Blue       = "\033[34m"
+		Magenta    = "\033[35m"
+		Cyan       = "\033[36m"
+		White      = "\033[37m"
+		BgBlue     = "\033[44m"
+		BgMagenta  = "\033[45m"
+		BoldYellow = "\033[1;33m"
+		BoldCyan   = "\033[1;36m"
+		BoldGreen  = "\033[1;32m"
+	)
+
+	fmt.Printf("\n%s%s=== Search Engine Queries for: %s ===%s\n", BgBlue, White, faviconURL, Reset)
+	fmt.Printf("%sTechnology identified: %s%s%s\n\n", BoldYellow, Cyan, tech, Reset)
+	
+	fmt.Printf("%sSHODAN:%s\n", BoldGreen, Reset)
+	fmt.Printf("  %shttp.favicon.hash:%s%d%s\n", Yellow, BoldCyan, murmurHash, Reset)
+	fmt.Printf("  %shttps://www.shodan.io/search?query=http.favicon.hash%%3A%d%s\n\n", Blue, murmurHash, Reset)
+	
+	fmt.Printf("%sFOFA:%s\n", BoldGreen, Reset)
+	fmt.Printf("  %sicon_hash=\"%s%d%s\"%s\n", Yellow, BoldCyan, murmurHash, Yellow, Reset)
+	fmt.Printf("  %shttps://fofa.info/result?q=icon_hash%%3D%%22%d%%22%s\n\n", Blue, murmurHash, Reset)
+	
+	fmt.Printf("%sCENSYS:%s\n", BoldGreen, Reset)
+	fmt.Printf("  %sservices.http.response.favicons.md5_hash = \"%s%s%s\"%s\n", Yellow, BoldCyan, md5Hash, Yellow, Reset)
+	fmt.Printf("  %sservices.http.response.favicons.sha256_hash = \"%s%s%s\"%s\n", Yellow, BoldCyan, sha256Hash, Yellow, Reset)
+	fmt.Printf("  %shttps://search.censys.io/search?q=services.http.response.favicons.md5_hash%%3A%s%s\n\n", Blue, md5Hash, Reset)
+	
+	fmt.Printf("%sHUNTER.IO:%s\n", BoldGreen, Reset)
+	fmt.Printf("  %sUse domain-based search as Hunter doesn't support favicon hash directly%s\n", Yellow, Reset)
+	fmt.Printf("  %shttps://hunter.io/search/ (search by domain)%s\n\n", Blue, Reset)
+	
+	fmt.Printf("%sZOOMEYE:%s\n", BoldGreen, Reset)
+	fmt.Printf("  %siconhash:%s%d%s\n", Yellow, BoldCyan, murmurHash, Reset)
+	fmt.Printf("  %shttps://www.zoomeye.org/searchResult?q=iconhash%%3A%d%s\n\n", Blue, murmurHash, Reset)
+	
+	fmt.Printf("%sQUAKE:%s\n", BoldGreen, Reset)
+	fmt.Printf("  %sfavicon.hash:%s%d%s\n", Yellow, BoldCyan, murmurHash, Reset)
+	fmt.Printf("  %shttps://quake.360.cn/quake/#/searchResult?searchVal=favicon.hash%%3A%d%s\n\n", Blue, murmurHash, Reset)
+	
+	fmt.Printf("%s%sSUMMARY:%s\n", BgMagenta, White, Reset)
+	fmt.Printf("  %sMurmur3 Hash (most common):%s %s%d%s\n", BoldYellow, Reset, BoldCyan, murmurHash, Reset)
+	fmt.Printf("  %sMD5 Hash:%s %s%s%s\n", BoldYellow, Reset, BoldCyan, md5Hash, Reset)
+	fmt.Printf("  %sSHA256 Hash:%s %s%s%s\n", BoldYellow, Reset, BoldCyan, sha256Hash, Reset)
+	fmt.Printf("  %sIdentified Technology:%s %s%s%s\n", BoldYellow, Reset, BoldCyan, tech, Reset)
+	fmt.Printf("%s%s========================================%s\n\n", BgBlue, White, Reset)
+}
+
+// generateSearchQueries generates search engine queries for the given hashes
+func generateSearchQueries(murmurHash int32, md5Hash string) SearchEngineQueries {
+	return SearchEngineQueries{
+		Shodan:  fmt.Sprintf("http.favicon.hash:%d", murmurHash),
+		Fofa:    fmt.Sprintf("icon_hash=\"%d\"", murmurHash),
+		Censys:  fmt.Sprintf("services.http.response.favicons.md5_hash=\"%s\"", md5Hash),
+		ZoomEye: fmt.Sprintf("iconhash:%d", murmurHash),
+		Quake:   fmt.Sprintf("favicon.hash:%d", murmurHash),
+	}
+}
+
+// printJSONOutput prints the results in JSON format
+func printJSONOutput(inputURL string, faviconURL string, murmurHash int32, md5Hash, sha256Hash, tech string) {
+result := ExtendedFaviconResult{
+	FaviconResult: FaviconResult{
+		InputURL:    inputURL,
+		FaviconURL:  faviconURL,
+		MurmurHash:  murmurHash,
+		MD5Hash:     md5Hash,
+		SHA256Hash:  sha256Hash,
+		Technology:  tech,
+	},
+	SearchQueries: generateSearchQueries(murmurHash, md5Hash),
+}
+jsonData, err := json.MarshalIndent(result, "", "  ")
+if err != nil {
+	fmt.Printf("Error marshaling JSON: %v\n", err)
+	return
+}
+fmt.Println(string(jsonData))
+}
+
 func main() {
-	// Define the flags
-	timeout := flag.Duration("timeout", 10*time.Second, "Set the HTTP request timeout duration")
-	version := flag.Bool("version", false, "Print the version of the tool and exit.")
-	silent := flag.Bool("silent", false, "Silent mode.")
-	source := flag.Bool("source", false, "Enable source output for where the url coming from scraped or added /favicon.ico")
-	userAgent := flag.String("H", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36", "Set the User-Agent header for HTTP requests")
-	fingerprintPath := flag.String("fingerprint", "", "Path to the fingerprint.json file (default: $HOME/.config/favinfo/fingerprint.json or ./fingerprint.json)")
-	flag.Parse()
+	// Define the flags using pflag
+	timeout := pflag.Duration("timeout", 10*time.Second, "Set the HTTP request timeout duration")
+	source := pflag.Bool("source", false, "Enable source output for where the url coming from scraped or added /favicon.ico")
+	userAgent := pflag.StringP("user-agent", "H", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36", "Set the User-Agent header for HTTP requests")
+	fingerprintPath := pflag.String("fingerprint", "", "Path to the fingerprint.json file (default: $HOME/.config/favinfo/fingerprint.json or ./fingerprint.json)")
+	jsonOutput := pflag.Bool("json", false, "Output results in JSON format")
+	silent := pflag.Bool("silent", false, "Silent mode.")
+	version := pflag.Bool("version", false, "Print the version of the tool and exit.")
+	
+	// Parse the flags
+	pflag.Parse()
 
 	if *version {
 		banner.PrintBanner()
@@ -279,9 +395,17 @@ func main() {
 
 			// Find the technology based on the Murmur3 hash
 			tech := fingerprintMap[fmt.Sprintf("%d", murmurHash)]
+			if tech == "" {
+				tech = "unknown"
+			}
 
-			// Print the results
-			fmt.Printf("%s [%d] [%s] [%s] [%s]\n", faviconURL, murmurHash, md5Hash, sha256Hash, tech)
+			// Output based on format
+			if *jsonOutput {
+				printJSONOutput(input, faviconURL, murmurHash, md5Hash, sha256Hash, tech)
+			} else {
+				// Print the results in normal format
+				printSearchExamples(faviconURL, murmurHash, md5Hash, sha256Hash, tech)
+			}
 		}
 	}
 }
