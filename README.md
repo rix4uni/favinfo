@@ -9,7 +9,7 @@ A powerful reconnaissance tool for extracting and analyzing favicons from websit
 - 🛠️ **Technology Identification**: Matches favicon hashes against fingerprint database
 - 🔎 **Search Engine Integration**: Generates queries for Shodan, FOFA, Censys, ZoomEye, and Quake (JSON mode)
 - 📊 **Flexible Output**: Simplified format for batch processing or detailed JSON format
-- ⚡ **High Performance**: Optimized simplified output mode for processing thousands of URLs
+- ⚡ **High Performance**: Concurrent processing with configurable workers (default 50) for scanning thousands of URLs efficiently
 - 🔒 **Security Focused**: Supports custom User-Agents and TLS configuration
 - 📥 **Auto-Download**: Automatically downloads fingerprint database from GitHub if not found
 
@@ -36,6 +36,7 @@ cd favinfo; go install
 ## Usage
 ```
 Usage of favinfo:
+      --concurrent int       Number of URLs to process concurrently (default 50)
       --fingerprint string   Path to the fingerprint.json file (default: $HOME/.config/favinfo/fingerprint.json or ./fingerprint.json)
       --json                 Output results in JSON format
       --silent               Silent mode.
@@ -70,7 +71,8 @@ echo "https://www.google.com" | favinfo --json
 
 | Flag | Short | Description | Default |
 |------|-------|-------------|---------|
-| `--timeout` | | HTTP request timeout | `10s` |
+| `--concurrent` | | Number of URLs to process concurrently | `50` |
+| `--timeout` | | HTTP request timeout | `30s` |
 | `--source` | | Show source of favicon URLs | `false` |
 | `--user-agent` | `-H` | Set custom User-Agent | Mozilla/5.0... |
 | `--fingerprint` | | Path to fingerprint.json | Auto-detected |
@@ -163,8 +165,11 @@ This format:
 
 ### Batch Processing
 ```yaml
-# Fast batch processing with simplified output (default)
+# Fast batch processing with simplified output (default, 50 concurrent workers)
 cat urls.txt | favinfo --timeout 15s --silent > hashes.txt
+
+# High-performance batch processing with custom concurrency
+cat urls.txt | favinfo --timeout 15s --concurrent 100 --silent > hashes.txt
 
 # Detailed batch processing with JSON output
 cat urls.txt | favinfo --timeout 15s --json > results.json
