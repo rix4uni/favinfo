@@ -5,12 +5,13 @@ A powerful reconnaissance tool for extracting and analyzing favicons from websit
 ## Features
 
 - 🔍 **Automatic Favicon Extraction**: Scrapes favicons from HTML or falls back to `/favicon.ico`
-- 🎯 **Multiple Hash Algorithms**: Calculates Murmur3, MD5, and SHA256 hashes
+- 🎯 **Multiple Hash Algorithms**: Calculates Murmur3, MD5, and SHA256 hashes (MD5/SHA256 in JSON mode only)
 - 🛠️ **Technology Identification**: Matches favicon hashes against fingerprint database
-- 🔎 **Search Engine Integration**: Generates queries for Shodan, FOFA, Censys, ZoomEye, and Quake
-- 📊 **Flexible Output**: Supports human-readable and JSON formats
-- ⚡ **High Performance**: Concurrent processing with configurable timeouts
+- 🔎 **Search Engine Integration**: Generates queries for Shodan, FOFA, Censys, ZoomEye, and Quake (JSON mode)
+- 📊 **Flexible Output**: Simplified format for batch processing or detailed JSON format
+- ⚡ **High Performance**: Optimized simplified output mode for processing thousands of URLs
 - 🔒 **Security Focused**: Supports custom User-Agents and TLS configuration
+- 📥 **Auto-Download**: Automatically downloads fingerprint database from GitHub if not found
 
 ## Installation
 ```
@@ -19,9 +20,9 @@ go install github.com/rix4uni/favinfo@latest
 
 ## Download prebuilt binaries
 ```
-wget https://github.com/rix4uni/favinfo/releases/download/v0.0.6/favinfo-linux-amd64-0.0.6.tgz
-tar -xvzf favinfo-linux-amd64-0.0.6.tgz
-rm -rf favinfo-linux-amd64-0.0.6.tgz
+wget https://github.com/rix4uni/favinfo/releases/download/v0.0.7/favinfo-linux-amd64-0.0.7.tgz
+tar -xvzf favinfo-linux-amd64-0.0.7.tgz
+rm -rf favinfo-linux-amd64-0.0.7.tgz
 mv favinfo ~/go/bin/favinfo
 ```
 Or download [binary release](https://github.com/rix4uni/favinfo/releases) for your platform.
@@ -39,7 +40,7 @@ Usage of favinfo:
       --json                 Output results in JSON format
       --silent               Silent mode.
       --source               Enable source output for where the url coming from scraped or added /favicon.ico
-      --timeout duration     Set the HTTP request timeout duration (default 10s)
+      --timeout duration     Set the HTTP request timeout duration (default 30s)
   -H, --user-agent string    Set the User-Agent header for HTTP requests (default "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36")
       --version              Print the version of the tool and exit.
 ```
@@ -73,16 +74,25 @@ echo "https://www.google.com" | favinfo --json
 | `--source` | | Show source of favicon URLs | `false` |
 | `--user-agent` | `-H` | Set custom User-Agent | Mozilla/5.0... |
 | `--fingerprint` | | Path to fingerprint.json | Auto-detected |
-| `--json` | | Output in JSON format | `false` |
+| `--json` | | Output in JSON format (full details) | `false` |
 | `--silent` | | Silent mode (no banner) | `false` |
 | `--version` | | Print version and exit | `false` |
 
+**Note**: Default output is simplified format (`URL [hash1, hash2]`). Use `--json` flag for detailed output with all hashes and search engine queries.
+
 ## Fingerprint Database
 
-FavInfo uses a fingerprint database to identify technologies based on favicon hashes. The tool looks for the database in:
+FavInfo uses a fingerprint database to identify technologies based on favicon hashes. The tool automatically looks for the database in:
 
 1. `$HOME/.config/favinfo/fingerprint.json` (recommended)
 2. `./fingerprint.json` (current directory)
+
+If the database is not found in either location, FavInfo will automatically:
+- Create the `~/.config/favinfo/` directory if it doesn't exist
+- Download `fingerprint.json` from the GitHub repository
+- Save it to `~/.config/favinfo/fingerprint.json`
+
+The download message is shown unless `--silent` flag is used.
 
 ### Custom Fingerprint Location
 ```yaml
@@ -91,43 +101,19 @@ echo "example.com" | favinfo --fingerprint /path/to/custom/fingerprint.json
 
 ## Output Examples
 
-### Standard Output
+### Simplified Output (Default)
+The default output format is optimized for batch processing thousands of URLs. It shows only the URL and Murmur3 hash(es):
+
 ```yaml
-=== Search Engine Queries for: https://www.google.com/favicon.ico ===
-Technology identified: google
-
-SHODAN:
-  http.favicon.hash:708578229
-  https://www.shodan.io/search?query=http.favicon.hash%3A708578229
-
-FOFA:
-  icon_hash="708578229"
-  https://fofa.info/result?q=icon_hash%3D%22708578229%22
-
-CENSYS:
-  services.http.response.favicons.md5_hash = "f3418a443e7d841097c714d69ec4bcb8"
-  services.http.response.favicons.sha256_hash = "6da5620880159634213e197fafca1dde0272153be3e4590818533fab8d040770"
-  https://search.censys.io/search?q=services.http.response.favicons.md5_hash%3Af3418a443e7d841097c714d69ec4bcb8
-
-HUNTER.IO:
-  Use domain-based search as Hunter doesn't support favicon hash directly
-  https://hunter.io/search/ (search by domain)
-
-ZOOMEYE:
-  iconhash:708578229
-  https://www.zoomeye.org/searchResult?q=iconhash%3A708578229
-
-QUAKE:
-  favicon.hash:708578229
-  https://quake.360.cn/quake/#/searchResult?searchVal=favicon.hash%3A708578229
-
-SUMMARY:
-  Murmur3 Hash (most common): 708578229
-  MD5 Hash: f3418a443e7d841097c714d69ec4bcb8
-  SHA256 Hash: 6da5620880159634213e197fafca1dde0272153be3e4590818533fab8d040770
-  Identified Technology: google
-========================================
+https://www.google.com [708578229]
+https://www.bing.com [-583637433]
+https://example.com [123456789, 987654321]
 ```
+
+This format:
+- Only calculates Murmur3 hash (fastest processing)
+- Skips MD5/SHA256 calculations and fingerprint lookups
+- Perfect for scanning large lists of subdomains
 
 ### JSON Output
 ```json
@@ -177,16 +163,23 @@ SUMMARY:
 
 ### Batch Processing
 ```yaml
+# Fast batch processing with simplified output (default)
+cat urls.txt | favinfo --timeout 15s --silent > hashes.txt
+
+# Detailed batch processing with JSON output
 cat urls.txt | favinfo --timeout 15s --json > results.json
 ```
 
 ### Integration with Other Tools
 ```yaml
-# Extract domains from subfinder and get favicon info
+# Extract domains from subfinder and get favicon hashes (simplified output)
 subfinder -d example.com | favinfo --silent
 
-# Combine with jq for JSON processing
+# Get detailed JSON output for specific analysis
 echo "example.com" | favinfo --json | jq '.murmur_hash'
+
+# Process thousands of URLs efficiently with simplified output
+cat urls.txt | favinfo --silent > hashes.txt
 ```
 
 ### Custom Fingerprint Database
