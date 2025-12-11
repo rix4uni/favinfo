@@ -289,6 +289,7 @@ func main() {
 	jsonOutput := pflag.Bool("json", false, "Output results in JSON format")
 	silent := pflag.Bool("silent", false, "Silent mode.")
 	version := pflag.Bool("version", false, "Print the version of the tool and exit.")
+	verbose := pflag.Bool("verbose", false, "Verbose mode. Show verbose output.")
 
 	// Parse the flags
 	pflag.Parse()
@@ -340,7 +341,7 @@ func main() {
 			fingerprintFilePath = "fingerprint.json"
 		} else {
 			// File not found, attempt to download it
-			if !*silent {
+			if !*verbose {
 				fmt.Println("fingerprint.json not found. Downloading from GitHub...")
 			}
 			if err := downloadFingerprintFile(fingerprintURL, configPath); err != nil {
