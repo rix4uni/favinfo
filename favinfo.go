@@ -341,7 +341,7 @@ func main() {
 			fingerprintFilePath = "fingerprint.json"
 		} else {
 			// File not found, attempt to download it
-			if !*verbose {
+			if *verbose {
 				fmt.Println("fingerprint.json not found. Downloading from GitHub...")
 			}
 			if err := downloadFingerprintFile(fingerprintURL, configPath); err != nil {
